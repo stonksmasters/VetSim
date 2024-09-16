@@ -15,16 +15,10 @@ const openai = new OpenAI({
 app.use(cors()); // Allow cross-origin requests
 app.use(express.json()); // Parse JSON bodies
 
-// Endpoint to handle GPT-4 Assistant chat
-app.post('/chat', async (req, res) => {
-    const userMessage = req.body.message;
-
-    if (!userMessage) {
-        return res.status(400).json({ error: 'No message provided' });
-    }
-
+// Utility function to handle OpenAI API call
+const generateResponse = async (userMessage) => {
     try {
-        // Step 1: Create a conversation with the user and assistant messages
+        // Call OpenAI to generate the completion
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini", // Use your specific model here
             messages: [
@@ -42,24 +36,39 @@ app.post('/chat', async (req, res) => {
                     
                     After the student makes a diagnosis, respond with whether their diagnosis is correct or not, and provide further details if needed.`
                 },
-                { 
-                    role: "user", 
-                    content: userMessage // The user's input from the frontend
-                }
+                { role: "user", content: userMessage }
             ],
         });
-
-        // Step 2: Extract the assistant's response from the completion object
-        const assistantMessage = completion.choices[0].message.content;
-
-        // Step 3: Send the assistant's response back to the frontend
-        res.json({ message: assistantMessage });
+        
+        // Return the assistant's response
+        return completion.choices[0].message.content;
     } catch (error) {
         console.error('Error interacting with GPT-4:', error.response ? error.response.data : error.message);
-        res.status(500).json({ error: 'Failed to communicate with GPT-4 Assistant' });
+        throw new Error('Failed to communicate with GPT-4 Assistant');
+    }
+};
+
+// Endpoint to handle GPT-4 Assistant chat
+app.post('/chat', async (req, res) => {
+    const { message: userMessage } = req.body;
+
+    if (!userMessage) {
+        return res.status(400).json({ error: 'No message provided' });
+    }
+
+    try {
+        // Generate assistant response using OpenAI
+        const assistantMessage = await generateResponse(userMessage);
+        
+        // Send the response back to the frontend
+        res.json({ message: assistantMessage });
+    } catch (error) {
+        // Error handling for any failures
+        res.status(500).json({ error: error.message });
     }
 });
 
+// Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
