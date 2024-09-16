@@ -16,13 +16,14 @@ document.getElementById('chatForm').addEventListener('submit', function(event) {
     document.getElementById('userInput').value = '';
 
     // Send the user's message to the backend to interact with GPT
-    fetch('http://localhost:5000/chat', {
+    fetch('https://vetsim.onrender.com/chat', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message: userInput })
     })
+    
     
     .then(response => response.json())
     .then(data => {
