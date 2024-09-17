@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const OpenAI = require('openai'); // Importing the OpenAI SDK
+const OpenAI = require('openai'); 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,40 +12,53 @@ const openai = new OpenAI({
 });
 
 // Middleware
-app.use(cors()); // Allow cross-origin requests
-app.use(express.json()); // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
+
+// Keep track of the game state
+let gameState = {
+    stage: 'gatheringInfo',
+    information: {
+        symptoms: [],
+        tests: [],
+    }
+};
 
 // Utility function to handle OpenAI API call
 const generateResponse = async (userMessage) => {
-    try {
-        // Call OpenAI to generate the completion
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini", // Use your specific model here
-            messages: [
-                { 
-                    role: "system", 
-                    content: `You are role-playing as the owner of a pet named Buddy, a 5-year-old Golden Retriever who has been limping for the past two days. 
-                    
-                    Your job is to only respond when the vet student asks questions or requests tests. 
-                    
-                    Wait for the student to ask for information (like symptoms, tests, etc.) and provide relevant responses when prompted. Do not give too much information unless specifically asked.
+    let messages = [];
 
-                    If the student requests tests, provide the results: 
-                    - X-ray: "No visible fractures, but there is mild soft tissue swelling in the left hip."
-                    - Blood work: "Slightly elevated white blood cells, indicating mild inflammation."
-                    
-                    After the student makes a diagnosis, respond with whether their diagnosis is correct or not, and provide further details if needed.`
-                },
-                { role: "user", content: userMessage }
-            ],
-        });
-        
-        // Return the assistant's response
-        return completion.choices[0].message.content;
-    } catch (error) {
-        console.error('Error interacting with GPT-4:', error.response ? error.response.data : error.message);
-        throw new Error('Failed to communicate with GPT-4 Assistant');
+    // Build dynamic context based on the current game state
+    if (gameState.stage === 'gatheringInfo') {
+        messages.push({ role: "system", content: `
+            You are role-playing as a pet owner. The vet student will ask questions to diagnose a dog named Buddy, a 5-year-old Golden Retriever who is limping. 
+            Respond only when the vet asks questions. Provide appropriate answers about the dog's symptoms and behavior.
+            Allow the vet student to ask questions like 'Is Buddy eating normally?', 'Does Buddy wince when you touch his leg?'.
+            Offer follow-up options for further testing like blood work, X-rays, or ultrasound based on their questions.
+        `});
+    } else if (gameState.stage === 'runningTests') {
+        messages.push({ role: "system", content: `
+            You are role-playing as a vet assistant providing test results. The student has chosen to run tests on Buddy. Provide relevant test results based on their choice:
+            - Blood work: "Slightly elevated white blood cells, indicating mild inflammation."
+            - X-ray: "No visible fractures, but there is mild soft tissue swelling in the left hip."
+            - Ultrasound: "No internal injuries detected."
+        `});
+    } else if (gameState.stage === 'diagnosis') {
+        messages.push({ role: "system", content: `
+            The student is ready to make a diagnosis. Respond appropriately, confirming whether their diagnosis is correct or not.
+            Offer feedback and suggest a treatment plan if the diagnosis is correct, or offer more clues if they are wrong.
+        `});
     }
+
+    messages.push({ role: "user", content: userMessage });
+
+    // Call OpenAI API with the dynamic context
+    const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: messages,
+    });
+
+    return completion.choices[0].message.content;
 };
 
 // Endpoint to handle GPT-4 Assistant chat
@@ -60,10 +73,16 @@ app.post('/chat', async (req, res) => {
         // Generate assistant response using OpenAI
         const assistantMessage = await generateResponse(userMessage);
         
+        // Update game state based on user input
+        if (userMessage.includes("X-ray") || userMessage.includes("blood test")) {
+            gameState.stage = 'runningTests';
+        } else if (userMessage.includes("diagnosis")) {
+            gameState.stage = 'diagnosis';
+        }
+
         // Send the response back to the frontend
         res.json({ message: assistantMessage });
     } catch (error) {
-        // Error handling for any failures
         res.status(500).json({ error: error.message });
     }
 });
