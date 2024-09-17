@@ -27,6 +27,10 @@ const generateScenario = async () => {
                 1. Pet details (species, breed, age)
                 2. Symptoms (e.g., limping, lethargy, vomiting, etc.)
                 3. The correct diagnosis (e.g., fracture, infection, inflammation, etc.)
+                Format the response as:
+                Pet: species, breed, age.
+                Symptoms: description.
+                Diagnosis: correct diagnosis.
             `,
         },
     ];
@@ -36,7 +40,23 @@ const generateScenario = async () => {
             model: "gpt-4",
             messages: messages,
         });
-        return completion.choices[0].message.content;
+
+        const responseText = completion.choices[0].message.content;
+
+        // Manually parse the response text into scenario components
+        const petMatch = responseText.match(/Pet:\s*(.*)/);
+        const symptomsMatch = responseText.match(/Symptoms:\s*(.*)/);
+        const diagnosisMatch = responseText.match(/Diagnosis:\s*(.*)/);
+
+        if (!petMatch || !symptomsMatch || !diagnosisMatch) {
+            throw new Error('Failed to generate a valid scenario');
+        }
+
+        return {
+            pet: petMatch[1],
+            symptoms: symptomsMatch[1],
+            diagnosis: diagnosisMatch[1],
+        };
     } catch (error) {
         console.error('Error generating scenario:', error.response ? error.response.data : error.message);
         throw new Error('Failed to generate scenario');
@@ -106,8 +126,8 @@ app.post('/chat', async (req, res) => {
         // Check if a scenario has been generated, if not, generate a new one
         if (!currentScenario) {
             const scenario = await generateScenario();
-            currentScenario = JSON.parse(scenario); // Make sure to parse the generated scenario into JSON format
-            res.json({ message: `You are diagnosing ${currentScenario.pet.breed} (${currentScenario.pet.species}), age ${currentScenario.pet.age}. Symptoms: ${currentScenario.symptoms}` });
+            currentScenario = scenario; // Store the scenario
+            res.json({ message: `You are diagnosing ${currentScenario.pet}. Symptoms: ${currentScenario.symptoms}` });
             return;
         }
 
