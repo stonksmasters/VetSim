@@ -12,11 +12,12 @@
             <h1>LSU Vet Student Practice Chat</h1>
         </header>
         <main>
+        <div id="infoBar" class="info-bar"><span id="scoreBoard">Score: 0/0</span> | <span id="timer">Time: --</span></div>
             <div class="chat-container">
                 <div id="chatWindow" class="chat-window"></div>
                 <form id="chatForm">
                     <textarea id="userInput" rows="4" placeholder="Enter your text here..." required></textarea>
-                    <button type="submit">Submit</button>
+                    <div class="button-row"><button type="submit">Submit</button> <button type="button" id="hintButton">Hint</button></div>
                 </form>
             </div>
         </main>
