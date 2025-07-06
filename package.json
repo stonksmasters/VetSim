@@ -1,8 +1,14 @@
 {
+  "name": "vetsim-backend",
+  "version": "1.0.0",
+  "main": "index.js",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "openai": "^4.61.1"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
