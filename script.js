@@ -49,7 +49,7 @@ function sendMessage(message) {
     chatWindow.appendChild(loadingMessage);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
-    fetch('https://vetsim.onrender.com/chat', {
+    fetch('https://vetsim-1.onrender.com/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message })
